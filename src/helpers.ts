@@ -20,7 +20,11 @@ export const fetchFile = (path) => {
 export const getFormatDataToChart = (data) => {
   return data?.reduce((acc, [key, value]) => {
     acc.labels.push(key)
-    acc.datasets[0].data.push(Number(value.total))
+    acc.datasets[0].data.push(Number(value.usages.reduce((acc, el) => {
+      acc += el.total
+      
+      return acc
+    }, 0)))
     return acc
   }, { labels: [], datasets: [{ data: [], backgroundColor: '#5f8aff' }] })
 }

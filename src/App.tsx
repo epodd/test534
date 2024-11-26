@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import moment from 'moment'
+import _ from 'lodash'
 import 'react-dropdown/style.css';
 import {
   DEFAULT_FILTER,
@@ -11,12 +12,15 @@ import {
 import { Wrapper, DropdownStyled, Title, Box } from './styled'
 import { BarChart } from './Chart'
 
+
 function App() {
   const [models, setModels] = useState([])
   const [types, setTypes] = useState([])
   const [data, setData] = useState([])
   const [filteredData, setFilteredData] = useState([])
   const [filter, setFilter] = useState({})
+  
+  const dataRef = useRef([])
   
   useEffect(() => {
     (async () => {
@@ -48,30 +52,32 @@ function App() {
       
             const [day, month, year] = el.created_at.split('.')
             const date = `${year}-${month}-${day}`
-      
+            
+            const newEl = {...el, model: el.model, type: el.type, total}
+  
             if (acc[date]) {
-              acc[date].total += total
-              acc[date].model = el.model
-              acc[date].type = el.type
+              acc[date].usages.push(newEl)
+
             } else {
               acc[date] = {}
-              acc[date].total = total
-              acc[date].model = el.model
-              acc[date].type = el.type
+              acc[date].usages = [newEl]
             }
       
             return acc
           }, {})
     
+          
     
           const formData = Object.entries(usagesFormatted).sort((a,b) => {
             return moment(a[0]).valueOf() - moment(b[0]).valueOf()
           })
-    
+          
           setFilterWithDefaultValue(setTypes, Object.keys(types))
           setFilterWithDefaultValue(setModels, Object.keys(models))
     
+          
           setData(formData)
+          dataRef.current = formData
         }
         
       } catch (e) {
@@ -86,17 +92,22 @@ function App() {
     const keys = Object.keys(filter).filter(el => el !== DEFAULT_FILTER)
     
     if (keys?.length) {
-      let result = [...data]
+      let result = _.cloneDeep( data)
       const filterNames = [...keys]
-  
+      
       while (filterNames.length) {
         const filterName = filterNames.shift()
-        result = result.filter(([_, value]) => value[filterName] === filter[filterName].value)
+        result = result.map(el => {
+          el[1].usages = el[1].usages.filter((usage) => usage[filterName] === filter[filterName].value)
+          
+          return el
+        })
       }
   
       setFilteredData(result)
     } else {
-      setFilteredData(data)
+      
+      setFilteredData(dataRef.current)
     }
   }, [filter, data])
   
